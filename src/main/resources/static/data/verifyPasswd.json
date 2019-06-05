@@ -1,0 +1,20 @@
+{
+	"versionNo":"1.03",
+	"acqId":"01",
+	"channelId":"00000000999",
+	"amount":"0.01",
+	"bizId":"auto",
+	"sendDate":"20190115",
+	"userID":"lxx180",
+	"sendTime":"180014",
+	"bankId":"0102",
+	"cardTp":"01",
+	"accountNo":"6212260200067551594",
+	"mobileNum":"15011126537",
+	"remark":"",
+	"txnTp":"01",
+	"ccy":"CNY",
+	"pageUrl":"http://www.baidu.com",
+	"notifyUrl":"http://10.100.140.62:8902/fire-phoenix/notice.htm",
+	"merchId":"0000180"
+}

@@ -1,0 +1,161 @@
+0.annotations (@SpringBootConfiguration,@EnableAutoConfiguration)
+
+1.start (run())
+
+2.customize (starter,listener,runner,env)
+
+3.examples (dynamic datasource)
+
+4.new features (jpa,jooq,webflux)
+
+5.bonus (banner)
+
+钩子方法
+钩子方法，是对于抽象方法或者接口中定义的方法的一个空实现，在实际中的应用，比如说有一个接口，这个接口里有7个方法，而你只想用其中一个方法，那么这时，你可以写一个抽象类实现这个接口，在这个抽象类里将你要用的那个方法设置为abstract,其它方法进行空实现，然后你再继承这个抽象类，就不需要实现其它不用的方法，这就是钩子方法的作用。
+
+applicationContext维护beanFactory,beanFactory封装了bean信息,ApplicationContext通过访问这个对象获取bean的对象信息（BeanDefinition/Bean对象，都是由BeanFactory实际创建并管理的）,ApplicationContext也实现了一系列的BeanFactory接口(可以说ApplicationContext对BeanFactory对象实现一种代理)。
+
+
+    @Override
+	public void refresh() throws BeansException, IllegalStateException {
+		synchronized (this.startupShutdownMonitor) {
+			// Prepare this context for refreshing.
+			/**
+			 * 刷新上下文环境
+			 * 初始化上下文环境，对系统的环境变量或者系统属性进行准备和校验
+			 * 如环境变量中必须设置某个值才能运行，否则不能运行，这个时候可以在这里加这个校验，
+			 * 重写initPropertySources方法就好了
+			 */
+			prepareRefresh();
+
+			// Tell the subclass to refresh the internal bean factory.
+			/**
+			 * 初始化BeanFactory，解析XML，相当于之前的XmlBeanFactory的操作，
+			 */
+			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
+
+			// Prepare the bean factory for use in this context.
+			/**
+			 * 为上下文准备BeanFactory，即对BeanFactory的各种功能进行填充，如常用的注解@Autowired @Qualifier等
+			 * 设置SPEL表达式#{key}的解析器
+			 * 设置资源编辑注册器，如PerpertyEditorSupper的支持
+			 * 添加ApplicationContextAwareProcessor处理器
+			 * 在依赖注入忽略实现*Aware的接口，如EnvironmentAware、ApplicationEventPublisherAware等
+			 * 注册依赖，如一个bean的属性中含有ApplicationEventPublisher(beanFactory)，则会将beanFactory的实例注入进去
+			 */
+			prepareBeanFactory(beanFactory);
+
+			try {
+				// Allows post-processing of the bean factory in context subclasses.
+				/**
+				 * 提供子类覆盖的额外处理，即子类处理自定义的BeanFactoryPostProcess
+				 */
+				postProcessBeanFactory(beanFactory);
+
+				// Invoke factory processors registered as beans in the context.
+				/**
+				 * 激活各种BeanFactory处理器,包括BeanDefinitionRegistryBeanFactoryPostProcessor和普通的BeanFactoryPostProcessor
+				 * 执行对应的postProcessBeanDefinitionRegistry方法 和  postProcessBeanFactory方法
+				 */
+				invokeBeanFactoryPostProcessors(beanFactory);
+
+				// Register bean processors that intercept bean creation.
+				/**
+				 * 注册拦截Bean创建的Bean处理器，即注册BeanPostProcessor，不是BeanFactoryPostProcessor，注意两者的区别
+				 * 注意，这里仅仅是注册，并不会执行对应的方法，将在bean的实例化时执行对应的方法
+				 */
+				registerBeanPostProcessors(beanFactory);
+
+				// Initialize message source for this context.
+				/**
+				 * 初始化上下文中的资源文件，如国际化文件的处理等
+				 */
+				initMessageSource();
+
+				// Initialize event multicaster for this context.
+				/**
+				 * 初始化上下文事件广播器，并放入applicatioEventMulticaster,如ApplicationEventPublisher
+				 */
+				initApplicationEventMulticaster();
+
+				// Initialize other special beans in specific context subclasses.
+				/**
+				 * 给子类扩展初始化其他Bean
+				 */
+				onRefresh();
+
+				// Check for listener beans and register them.
+				/**
+				 * 在所有bean中查找listener bean，然后注册到广播器中
+				 */
+				registerListeners();
+
+				// Instantiate all remaining (non-lazy-init) singletons.
+				/**
+				 * 设置转换器
+				 * 注册一个默认的属性值解析器
+				 * 冻结所有的bean定义，说明注册的bean定义将不能被修改或进一步的处理
+				 * 初始化剩余的非惰性的bean，即初始化非延迟加载的bean
+				 */
+				finishBeanFactoryInitialization(beanFactory);
+
+				// Last step: publish corresponding event.
+				/**
+				 * 初始化生命周期处理器DefaultLifecycleProcessor，DefaultLifecycleProcessor含有start方法和stop方法，spring启动的时候调用start方法开始生命周期，
+				 * spring关闭的时候调用stop方法来结束生命周期，通常用来配置后台程序，启动有一直运行，如一直轮询kafka
+				 * 启动所有实现了Lifecycle接口的类
+				 * 通过spring的事件发布机制发布ContextRefreshedEvent事件，以保证对应的监听器做进一步的处理，即对那种在spring启动后需要处理的一些类，这些类实现了
+				 * ApplicationListener<ContextRefreshedEvent> ,这里就是要触发这些类的执行(执行onApplicationEvent方法)另外，spring的内置Event有ContextClosedEvent、ContextRefreshedEvent、ContextStartedEvent、ContextStoppedEvent、RequestHandleEvent
+				 * 完成初始化，通知生命周期处理器lifeCycleProcessor刷新过程，同时发出ContextRefreshEvent通知其他人
+				 */
+				finishRefresh();
+			}
+
+			catch (BeansException ex) {
+				if (logger.isWarnEnabled()) {
+					logger.warn("Exception encountered during context initialization - " +
+							"cancelling refresh attempt: " + ex);
+				}
+
+				// Destroy already created singletons to avoid dangling resources.
+				destroyBeans();
+
+				// Reset 'active' flag.
+				cancelRefresh(ex);
+
+				// Propagate exception to caller.
+				throw ex;
+			}
+
+			finally {
+				// Reset common introspection caches in Spring's core, since we
+				// might not ever need metadata for singleton beans anymore...
+				resetCommonCaches();
+			}
+		}
+	}
+
+refresh()主流程
+1.初始化beanFactory,通过obtainFreshBeanFactory()获取一个由DefaultListableBeanFactory创建的beanFactory,交给applicationContext管理,加载beanDefinition--(beanFactory准备)
+2.调用工厂后处理器：根据反射机制从BeanDefinitionRegistry中找出所有BeanFactoryPostProcessor类型的Bean，并调用其postProcessBeanFactory()接口方法
+3．注册Bean后处理器：根据反射机制从BeanDefinitionRegistry中找出所有BeanPostProcessor类型的Bean，并将它们注册到容器Bean后处理器的注册表中,类似于第三步的调用工厂后处理器，区别之处在于，工厂后处理器在获取后立即调用，而Bean后处理器在获取后注册到上下文持有的beanfactory中，供以后操作调用（在用户获取bean的过程中，对已经完成属性设置工作的Bean进行后续加工，他加工的是bean，而工厂后处理器加工的是BeanDefinition）
+4．初始化消息源：初始化容器的国际化信息资源
+5．初始化应用上下文事件广播器（观察者模式中的具体主题角色，持有观察者角色的集合，称为注册表）,先看配置文件中有无广播器配置,若没有则应用框架自带的广播器实例
+6.初始化其他特殊的Bean：onRefresh()这是一个钩子方法，子类可以借助这个钩子方法执行一些特殊的操作
+7．注册事件监听器；（观察者模式中的观察者角色）,Spring根据上下文持有的beanfactory对象，从它的BeanDefinitionRegistry中找出所有实现org.springfamework.context.ApplicationListener的bean，将BeanDefinition对象生成bean，注册为容器的事件监听器，实际的操作就是将其添加到事件广播器所提供的监听器注册表中
+8．初始化singleton的Bean：实例化所有singleton的Bean，并将它们放入Spring容器的缓存中；这就是和直接在应用中使用BeanFactory的区别之处，在创建ApplicationContext对象时，不仅创建了一个BeanFactory对象，并且还应用它实例化所有单实例的bean。（在spring的配置文件中，bean默认为单例，除非在bean的配置中显式指定scope="prototype"）
+9．发布上下文刷新事件：在此处时容器已经启动完成，发布容器refresh事件（ContextRefreshedEvent）
+
+至此，ApplicationContext对象就完成了初始化工作：创建BeanFactory来装配BeanDefiniton，加工处理BeanDefiniton，注册了bean后处理器，初始化了消息资源，初始化了应用上下文事件广播器，注册了事件监听器，初始化了所有singleton的bean，最后发布上下文刷新事件
+
+
+cmpexchg指令：后续JDK通过CPU的cmpxchg指令，去比较寄存器中的 A 和 内存中的值 V。如果相等，就把要写入的新值 B 存入内存中。如果不相等，就将内存值 V 赋值给寄存器中的值 A。然后通过Java代码中的while循环再次调用cmpxchg指令进行重试，直到设置成功为止。
+
+
+锁
+公平锁/非公平锁
+公平锁是指多个线程按照申请锁的顺序来获取锁。
+非公平锁是指多个线程获取锁的顺序并不是按照申请锁的顺序
+
+AQS的核心思想是基于volatile int state这样的一个属性同时配合Unsafe工具对其原子性的操作来实现对当前锁的状态进行修改
+AQS基于一个双向链表实现
