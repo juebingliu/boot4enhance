@@ -52,7 +52,7 @@ public class CrawlerServiceImpl implements CrawlerService {
         for (CrawlerContent c : todayContent) {
             if(!map.containsKey(c.getPublishContent())) {
                 System.out.println(c.getPublishTime() + " : " + c.getPublishContent());
-                add.put(c.getPublishContent(),c.getPublishTime());
+                add.put(c.getPublishTime(),c.getPublishContent());
             }else {
                 continue;
             }
