@@ -3,6 +3,7 @@ package com.juebingliu.boot4enhance.service;
 import com.juebingliu.boot4enhance.domain.one.CrawlerContent;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author juebing
@@ -12,4 +13,6 @@ import java.util.List;
  */
 public interface CrawlerService {
     public void insertBatch(List<CrawlerContent> list);
+
+    Map<String,String> compareContent();
 }
